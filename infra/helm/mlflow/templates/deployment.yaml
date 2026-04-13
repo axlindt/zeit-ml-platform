@@ -29,8 +29,14 @@ spec:
             - name: MLFLOW_S3_ENDPOINT_URL
               value: {{ .Values.minio.endpoint }}
             - name: AWS_ACCESS_KEY_ID
-              value: {{ .Values.minio.accessKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.minio.credentialsSecret }}
+                  key: access-key
             - name: AWS_SECRET_ACCESS_KEY
-              value: {{ .Values.minio.secretKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.minio.credentialsSecret }}
+                  key: secret-key
           ports:
             - containerPort: {{ .Values.service.port }}

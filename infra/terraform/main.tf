@@ -31,7 +31,7 @@ provider "helm" {
 # Bevor terraform apply: kubectl port-forward svc/minio 9000:9000 -n mlflow
 provider "minio" {
   minio_server   = "localhost:9000"
-  minio_user     = "minioadmin"
-  minio_password = "minioadmin"
+  minio_user     = var.minio_access_key
+  minio_password = var.minio_secret_key
   minio_ssl      = false
 }

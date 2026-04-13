@@ -9,5 +9,4 @@ service:
 minio:
   endpoint: "http://minio:9000"
   bucket: "mlflow-artifacts"
-  accessKey: "minioadmin"
-  secretKey: "minioadmin"
+  credentialsSecret: "minio-credentials"

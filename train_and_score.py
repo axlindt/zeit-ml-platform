@@ -248,14 +248,7 @@ def score():
         mlflow.log_metric("scores/pct_medium_risk", float(((probs >= 0.3) & (probs < 0.5)).mean()))
         mlflow.log_metric("scores/pct_low_risk", float((probs < 0.3).mean()))
 
-        if output_path.startswith("s3://"):
-            fs = get_s3fs()
-            with fs.open(output_path, "w") as f:
-                score_df.to_csv(f, index=False)
-        else:
-            score_df.to_csv(output_path, index=False)
-
-        # Scores als MLflow Artifact -- benannt nach Modell und Training Run ID
+        # Scores werden via MLflow als Artefakt gespeichert -- kein direkter MinIO Zugriff noetig
         with tempfile.TemporaryDirectory() as tmpdir:
             scores_filename = f"{model_name}-{model_run_id}_scores.csv"
             local_output = os.path.join(tmpdir, scores_filename)
