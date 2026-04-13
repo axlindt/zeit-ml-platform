@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: churn-training
+  namespace: mlflow
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: churn-training
+          image: zeit-churn-model:latest
+          imagePullPolicy: Never
+          env:
+            - name: MODE
+              value: "train"
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow:5000"
+            - name: TRAIN_DATA_PATH
+              value: "s3://ml-data/train_data.csv"
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: "http://minio:9000"
+            - name: AWS_ACCESS_KEY_ID
+              value: "minioadmin"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "minioadmin"

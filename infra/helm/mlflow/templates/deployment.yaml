@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: mlflow
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - mlflow
+            - server
+            - --host=0.0.0.0
+            - --port={{ .Values.service.port }}
+            - --artifacts-destination=s3://{{ .Values.minio.bucket }}
+            - --serve-artifacts
+            - --backend-store-uri=sqlite:///mlflow.db
+          env:
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: {{ .Values.minio.endpoint }}
+            - name: AWS_ACCESS_KEY_ID
+              value: {{ .Values.minio.accessKey }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{ .Values.minio.secretKey }}
+          ports:
+            - containerPort: {{ .Values.service.port }}

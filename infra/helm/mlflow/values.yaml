@@ -1,0 +1,13 @@
+image:
+  repository: zeit-mlflow
+  tag: latest
+  pullPolicy: Never
+
+service:
+  port: 5000
+
+minio:
+  endpoint: "http://minio:9000"
+  bucket: "mlflow-artifacts"
+  accessKey: "minioadmin"
+  secretKey: "minioadmin"

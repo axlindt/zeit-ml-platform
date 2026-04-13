@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: churn-scoring
+  namespace: mlflow
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: churn-scoring
+          image: zeit-churn-model:latest
+          imagePullPolicy: Never
+          env:
+            - name: MODE
+              value: "score"
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow:5000"
+            - name: SCORE_DATA_PATH
+              value: "s3://ml-data/scoring_data.csv"
+            - name: OUTPUT_PATH
+              value: "s3://ml-data/scored_output.csv"
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: "http://minio:9000"
+            - name: AWS_ACCESS_KEY_ID
+              value: "minioadmin"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "minioadmin"
+            # Optional: spezifische Run ID angeben, sonst wird der letzte Training Run genutzt
+            # - name: MODEL_RUN_ID
+            #   value: "deine-run-id-hier"
