@@ -9,7 +9,7 @@ Lokale MLOps-Plattform als Lösung der ZEIT ML/AI Platform Bewerbungsaufgabe.
 
 ## Schritt 1: Kubernetes Cluster aufsetzen
 
-Wir nutzen k3d für einen lokalen Kubernetes Cluster in Docker, kostenlos und identisch zu GKE in der Verwedung. In Production würde das Cluster selbst via Terraform als `google_container_cluster` erstellt werden.
+Ich nutze k3d für einen lokalen Kubernetes Cluster in Docker. Das vermeidet GCP Billing-Setup und funktioniert für dieses Beispiel genauso wie GKE. In Production würde das Cluster selbst via Terraform als `google_container_cluster` erstellt werden.
 
 ```bash
 k3d cluster create zeit-ml-platform
@@ -18,7 +18,7 @@ kubectl get nodes
 
 ## Schritt 2: Storage bereitstellen
 
-Fuer den Storage nutze ich MinIO, einen lokalen Object Store der das S3-Protokoll spricht und damit als GCS-Ersatz funktioniert. Alle Plattform-Komponenten (MinIO, MLflow) laufen im Namespace `mlflow`.
+Für den Storage nutze ich MinIO, einen lokalen Object Store der das S3-Protokoll spricht und damit als GCS-Ersatz funktioniert. Alle Plattform-Komponenten (MinIO, MLflow) laufen im Namespace `mlflow`.
 
 Terraform erstellt zwei Buckets: `mlflow-artifacts` für MLflow Artefakte und `ml-data` für Trainings- und Scoring-Daten.
 
@@ -30,5 +30,5 @@ terraform init
 terraform apply  # deployt MinIO
 
 kubectl port-forward svc/minio 9000:9000 -n mlflow &
-terraform apply  # erstellt Buckets und laedt Daten hoch
+terraform apply  # erstellt Buckets und lädt Daten hoch
 ```
