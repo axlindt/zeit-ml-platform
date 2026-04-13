@@ -1,0 +1,10 @@
+# Data folder: Don't want to commit raw data to git
+data/
+ 
+# OS
+.DS_Store
+ 
+# Python
+__pycache__/
+*.pyc
+ 
