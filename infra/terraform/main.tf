@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.0"
     }
+    minio = {
+      source  = "aminueza/minio"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -21,4 +25,13 @@ provider "helm" {
     config_path    = "~/.kube/config"
     config_context = "k3d-zeit-ml-platform"
   }
+}
+
+# MinIO läuft im Cluster — Terraform verbindet sich via port-forward.
+# Bevor terraform apply: kubectl port-forward svc/minio 9000:9000 -n mlflow
+provider "minio" {
+  minio_server   = "localhost:9000"
+  minio_user     = "minioadmin"
+  minio_password = "minioadmin"
+  minio_ssl      = false
 }
