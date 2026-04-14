@@ -1,6 +1,22 @@
 # ZEIT ML Platform
 
 Lokale MLOps-Plattform als Lösung der ZEIT ML/AI Platform Bewerbungsaufgabe.
+```
+┌─────────────────────────────────────┐
+│           k3d Cluster               │
+│                                     │
+│  ┌─────────┐      ┌──────────────┐  │
+│  │  MinIO  │◄─────│    MLflow    │  │
+│  │(Storage)│      │  (Tracking)  │  │
+│  └─────────┘      └──────────────┘  │
+│                          ▲          │
+│                          │          │
+│              ┌───────────────────┐  │
+│              │  Churn Model Job  │  │
+│              │ (train_and_score) │  │
+│              └───────────────────┘  │
+└─────────────────────────────────────┘
+```
 
 ## Voraussetzungen
 
@@ -78,5 +94,49 @@ kubectl logs -n mlflow job/churn-scoring -f
 ```
  
 Die berechneten Scores sind dann in zwei Formen verfügbar:
-- Als CSV in MinIO (`s3://ml-data/scored_output.csv`)
+- Als CSV in MinIO (`s3://ml-data/churn-xgbrf-{model_id}_output.csv`)
 - Als downloadbares Artefakt im MLflow Scoring Run
+
+## Teardown
+ 
+```bash
+kubectl delete -f infra/k8s/
+cd infra/terraform && terraform destroy
+k3d cluster delete zeit-ml-platform
+```
+
+## Limitierungen und Ausblick 
+ 
+Dieses Setup ist als Proof of Concept gedacht. Ein paar Gedanken dazu was sich ändern wuerde wenn das in Production geht und das Team wächst:
+ 
+**GCP Shift**
+Die `/infra` Struktur bleibt ähnlich, hauptsaechlich Provider und Endpoints aendern sich: k3d wird zu GKE, MinIO zu GCS, SQLite zu Cloud SQL. Docker Images wuerden in der GCP Artifact Registry gespeichert statt lokal importiert.
+ 
+**Abstraktion fuer Data Scientists**
+Im Moment muessen Nutzer:innen Kubernetes YAML Files kennen. Sinnvoll wäre eine klarere Trennung in zwei Repos:
+ 
+`zeit-ml-platform` (dieses Repo, Platform Team) -- Terraform, Helm Charts, Base Images, CLI Tool
+ 
+`zeit-ml-project-template` (Data Scientists clonen das) -- eigener Trainingscode, Dockerfile das auf der Base Image aufbaut, pyproject.toml
+ 
+Das CLI verbindet beide Welten, es kennt die Projektstruktur von `zeit-ml-project-template`, das Cluster und die Konventionen. Data Scientists müssen weder Kubernetes noch Terraform kennen sondern verwenden das CLI tool, zum Beispiel:
+ 
+```bash
+zeit-ml new churn-model    # neues Projekt aus Template aufsetzen
+zeit-ml train              # baut Image, startet Training Job, streamt Logs
+zeit-ml score              # startet Scoring Job
+zeit-ml debug              # interaktive Research Pod Session
+```
+ 
+Darunter laufen verschiedene Pod-Typen mit derselben Base Image aber unterschiedlichen Ressourcen: ein leichter Research Pod fuer Exploration, ein GPU Training Pod und ein CPU-only Scoring Pod. Weil alle Data Scientists das CLI nutzen sind alle Projekte gleich strukturiert, es gibt keine individuellen Kubernetes Konfigurationen mehr.
+ 
+**Credentials**
+Optimal wäre Workload Identity statt Secrets. Die Idee: Nutzer:innen loggen sich lokal via `gcloud auth login` ein, das gibt ihnen GCP IAM Rechte, z.B. "darf Jobs im Namespace ml-jobs starten". Wenn sie dann `kubectl apply` (bzw. die o.g. CLI Befehle) ausfuehren, startet der Pod mit einem vordefinierten GCP Service Account der nur minimale Rechte hat z.B. "darf nur aus ml-data lesen, nicht schreiben". Nutzer:innen können diesen Service Account nicht selbst ändern, dieser wird vom Admin vordefiniert. So gibt es zwei unabhängige Sicherheitsebenen: was die Nutzer:innen tun dürfen, und was der Pod tun darf. 
+ 
+**Ressourcen und Billing**
+Kubernetes Resource Quotas pro Namespace setzen harte Limits: Wie viele Pods gleichzeitig laufen duerfen, wie viel CPU, RAM und GPU ein Namespace verbrauchen darf. Ein neuer Job der diese Limits ueberschreiten würde wird  abgelehnt. Das verhindert dass ein einzelner Training Run den ganzen Cluster lahmlegt.
+ 
+Fuer Billing reicht oft ein einziges GCP Projekt mit Labels auf allen Ressourcen (`team: data-science`, `project: churn-model`, `env: production`). GCP Billing kann dann nach Labels filtern, man sieht genau was welches Team oder Projekt kostet ohne mehrere GCP Projekte verwalten zu müssen. Separate GCP Projekte statt Labels machen Sinn wenn man noch stärkere Isolation möchte.
+
+GCP Budget Alerts schicken Emails wenn 50%, 90% oder 100% eines gesetzten Budgets erriehct sind, stoppen aber nichts automatisch wie die  Kubernetes Quotas.
+ 
